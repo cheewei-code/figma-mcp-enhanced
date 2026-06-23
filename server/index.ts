@@ -128,6 +128,20 @@ const server = new McpServer({
   version: "1.0.0",
 });
 
+// Resolve file key from argument or FIGMA_FILE_KEY env var
+function resolveFileKey(file_key?: string): string {
+  const key = file_key ?? process.env.FIGMA_FILE_KEY;
+  if (!key) throw new Error("No file_key provided and FIGMA_FILE_KEY environment variable is not set.");
+  return key;
+}
+
+// Resolve team ID from argument or FIGMA_TEAM_ID env var
+function resolveTeamId(team_id?: string): string {
+  const id = team_id ?? process.env.FIGMA_TEAM_ID;
+  if (!id) throw new Error("No team_id provided and FIGMA_TEAM_ID environment variable is not set.");
+  return id;
+}
+
 // Tool: get the full scene context
 server.tool(
   "get_scene",
@@ -233,18 +247,18 @@ server.tool(
 
 // ── Phase 1: Figma REST API tools ──
 
+const FILE_KEY_DESC = "The Figma file key. Omit to use the FIGMA_FILE_KEY environment variable.";
+
 // Tool: get file metadata
 server.tool(
   "get_file_metadata",
   "Get metadata for a Figma file (name, last modified, thumbnail URL, version, etc.) using the Figma REST API. Requires FIGMA_API_TOKEN.",
   {
-    file_key: z.string().describe("The Figma file key (from the file URL: figma.com/file/<file_key>/...)"),
+    file_key: z.string().optional().describe(FILE_KEY_DESC),
   },
   async ({ file_key }) => {
-    const result = await getFileMetadata(file_key);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await getFileMetadata(resolveFileKey(file_key));
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -253,13 +267,11 @@ server.tool(
   "get_comments",
   "Get all comments on a Figma file. Requires FIGMA_API_TOKEN.",
   {
-    file_key: z.string().describe("The Figma file key"),
+    file_key: z.string().optional().describe(FILE_KEY_DESC),
   },
   async ({ file_key }) => {
-    const result = await getComments(file_key);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await getComments(resolveFileKey(file_key));
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -268,15 +280,13 @@ server.tool(
   "post_comment",
   "Post a comment on a Figma file. Optionally pin it to a specific node. Requires FIGMA_API_TOKEN.",
   {
-    file_key: z.string().describe("The Figma file key"),
     message: z.string().describe("The comment text"),
     node_id: z.string().optional().describe("Optional node ID to attach the comment to"),
+    file_key: z.string().optional().describe(FILE_KEY_DESC),
   },
   async ({ file_key, message, node_id }) => {
-    const result = await postComment(file_key, message, node_id);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await postComment(resolveFileKey(file_key), message, node_id);
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -285,14 +295,12 @@ server.tool(
   "delete_comment",
   "Delete a comment from a Figma file. Requires FIGMA_API_TOKEN.",
   {
-    file_key: z.string().describe("The Figma file key"),
     comment_id: z.string().describe("The comment ID to delete"),
+    file_key: z.string().optional().describe(FILE_KEY_DESC),
   },
   async ({ file_key, comment_id }) => {
-    const result = await deleteComment(file_key, comment_id);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await deleteComment(resolveFileKey(file_key), comment_id);
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -301,13 +309,11 @@ server.tool(
   "get_version_history",
   "Get the version history of a Figma file. Requires FIGMA_API_TOKEN.",
   {
-    file_key: z.string().describe("The Figma file key"),
+    file_key: z.string().optional().describe(FILE_KEY_DESC),
   },
   async ({ file_key }) => {
-    const result = await getVersionHistory(file_key);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await getVersionHistory(resolveFileKey(file_key));
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -318,13 +324,11 @@ server.tool(
   "get_variables",
   "Get all local variables defined in a Figma file (design tokens, etc.). Requires FIGMA_API_TOKEN.",
   {
-    file_key: z.string().describe("The Figma file key"),
+    file_key: z.string().optional().describe(FILE_KEY_DESC),
   },
   async ({ file_key }) => {
-    const result = await getVariables(file_key);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await getVariables(resolveFileKey(file_key));
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -333,38 +337,27 @@ server.tool(
   "set_variable",
   "Update the value of a Figma variable for a specific mode. Use get_variables first to find variable IDs and mode IDs. Requires FIGMA_API_TOKEN.",
   {
-    file_key: z.string().describe("The Figma file key"),
     variable_id: z.string().describe("The variable ID (from get_variables)"),
     mode_id: z.string().describe("The mode ID to update (from get_variables)"),
     value: z.union([z.string(), z.number(), z.boolean(), z.record(z.unknown())]).describe("The new value for the variable"),
+    file_key: z.string().optional().describe(FILE_KEY_DESC),
   },
   async ({ file_key, variable_id, mode_id, value }) => {
-    const result = await setVariable(file_key, variable_id, mode_id, value);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await setVariable(resolveFileKey(file_key), variable_id, mode_id, value);
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
 // Tool: get team components
 server.tool(
   "get_team_components",
-  "List all published components in a Figma team library. Uses FIGMA_TEAM_ID env variable if team_id is omitted. Requires FIGMA_API_TOKEN.",
+  "List all published components in a Figma team library. Requires FIGMA_API_TOKEN.",
   {
     team_id: z.string().optional().describe("Figma team ID. Defaults to FIGMA_TEAM_ID env variable."),
   },
   async ({ team_id }) => {
-    const id = team_id ?? process.env.FIGMA_TEAM_ID;
-    if (!id) {
-      return {
-        content: [{ type: "text", text: "No team_id provided and FIGMA_TEAM_ID environment variable is not set." }],
-        isError: true,
-      };
-    }
-    const result = await getTeamComponents(id);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await getTeamComponents(resolveTeamId(team_id));
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -373,14 +366,12 @@ server.tool(
   "get_dev_resources",
   "Get dev resources (external links, documentation) attached to specific nodes in a Figma file. Requires FIGMA_API_TOKEN.",
   {
-    file_key: z.string().describe("The Figma file key"),
     node_ids: z.array(z.string()).describe("List of node IDs to fetch dev resources for"),
+    file_key: z.string().optional().describe(FILE_KEY_DESC),
   },
   async ({ file_key, node_ids }) => {
-    const result = await getDevResources(file_key, node_ids);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await getDevResources(resolveFileKey(file_key), node_ids);
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -389,16 +380,14 @@ server.tool(
   "post_dev_resource",
   "Attach a dev resource (external link) to a node in a Figma file. Requires FIGMA_API_TOKEN.",
   {
-    file_key: z.string().describe("The Figma file key"),
     node_id: z.string().describe("The node ID to attach the resource to"),
     name: z.string().describe("Display name for the resource"),
     url: z.string().describe("URL of the resource"),
+    file_key: z.string().optional().describe(FILE_KEY_DESC),
   },
   async ({ file_key, node_id, name, url }) => {
-    const result = await postDevResource(file_key, node_id, name, url);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await postDevResource(resolveFileKey(file_key), node_id, name, url);
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -407,14 +396,12 @@ server.tool(
   "get_design_context",
   "Get full design context (properties, styles, geometry) for specific nodes in a Figma file. Useful for inspecting components or extracting design tokens. Requires FIGMA_API_TOKEN.",
   {
-    file_key: z.string().describe("The Figma file key"),
     node_ids: z.array(z.string()).describe("List of node IDs to fetch design context for"),
+    file_key: z.string().optional().describe(FILE_KEY_DESC),
   },
   async ({ file_key, node_ids }) => {
-    const result = await getDesignContext(file_key, node_ids);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await getDesignContext(resolveFileKey(file_key), node_ids);
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -431,51 +418,33 @@ const WEBHOOK_EVENT_TYPES = [
 // Tool: get project structure
 server.tool(
   "get_project_structure",
-  "Get all projects and their files for a Figma team. Uses FIGMA_TEAM_ID env variable if team_id is omitted. Requires FIGMA_API_TOKEN.",
+  "Get all projects and their files for a Figma team. Requires FIGMA_API_TOKEN.",
   {
     team_id: z.string().optional().describe("Figma team ID. Defaults to FIGMA_TEAM_ID env variable."),
   },
   async ({ team_id }) => {
-    const id = team_id ?? process.env.FIGMA_TEAM_ID;
-    if (!id) {
-      return {
-        content: [{ type: "text", text: "No team_id provided and FIGMA_TEAM_ID environment variable is not set." }],
-        isError: true,
-      };
-    }
-    const result = await getProjectStructure(id);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await getProjectStructure(resolveTeamId(team_id));
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
 // Tool: list webhooks
 server.tool(
   "list_webhooks",
-  "List all webhooks for a Figma team. Uses FIGMA_TEAM_ID env variable if team_id is omitted. Requires FIGMA_API_TOKEN.",
+  "List all webhooks for a Figma team. Requires FIGMA_API_TOKEN.",
   {
     team_id: z.string().optional().describe("Figma team ID. Defaults to FIGMA_TEAM_ID env variable."),
   },
   async ({ team_id }) => {
-    const id = team_id ?? process.env.FIGMA_TEAM_ID;
-    if (!id) {
-      return {
-        content: [{ type: "text", text: "No team_id provided and FIGMA_TEAM_ID environment variable is not set." }],
-        isError: true,
-      };
-    }
-    const result = await listWebhooks(id);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await listWebhooks(resolveTeamId(team_id));
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
 // Tool: create webhook
 server.tool(
   "create_webhook",
-  `Create a webhook for a Figma team. Uses FIGMA_TEAM_ID env variable if team_id is omitted. Requires FIGMA_API_TOKEN.
+  `Create a webhook for a Figma team. Requires FIGMA_API_TOKEN.
 Valid event_type values: ${WEBHOOK_EVENT_TYPES.join(", ")}.`,
   {
     endpoint: z.string().describe("The HTTPS URL that will receive webhook POST requests"),
@@ -485,17 +454,8 @@ Valid event_type values: ${WEBHOOK_EVENT_TYPES.join(", ")}.`,
     team_id: z.string().optional().describe("Figma team ID. Defaults to FIGMA_TEAM_ID env variable."),
   },
   async ({ endpoint, event_type, passcode, description, team_id }) => {
-    const id = team_id ?? process.env.FIGMA_TEAM_ID;
-    if (!id) {
-      return {
-        content: [{ type: "text", text: "No team_id provided and FIGMA_TEAM_ID environment variable is not set." }],
-        isError: true,
-      };
-    }
-    const result = await createWebhook(id, event_type, endpoint, passcode, description);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    const result = await createWebhook(resolveTeamId(team_id), event_type, endpoint, passcode, description);
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -508,9 +468,7 @@ server.tool(
   },
   async ({ webhook_id }) => {
     const result = await deleteWebhook(webhook_id);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 
