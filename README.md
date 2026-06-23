@@ -169,7 +169,7 @@ The **file key** is the alphanumeric ID in any Figma file URL: `figma.com/file/<
 |---|---|
 | `get_file_metadata` | File name, last modified date, thumbnail URL, version |
 | `get_comments` | All comments on a file |
-| `post_comment` | Post a comment, optionally pinned to a node |
+| `post_comment` | Post a comment, optionally pinned to a specific node — useful for leaving handoff notes directly on components |
 | `delete_comment` | Delete a comment by ID |
 | `get_version_history` | Full version history of a file |
 
@@ -177,21 +177,23 @@ The **file key** is the alphanumeric ID in any Figma file URL: `figma.com/file/<
 
 | Tool | What it does |
 |---|---|
-| `get_variables` | All local variables (design tokens) in a file |
-| `set_variable` | Update a variable's value for a specific mode |
-| `get_team_components` | All published components in a team library — requires `FIGMA_TEAM_ID` |
+| `get_variables` | All local variables (design tokens) in a file, including values across every mode — useful for auditing token values without opening Figma |
+| `set_variable` | Update a variable's value for a specific mode — lets you fix a token value directly without touching the Figma UI |
+| `get_team_components` | All published components in a team library — requires `FIGMA_TEAM_ID`. Most useful when *consuming* an external library; less relevant if this file *is* the library |
 
 #### Dev resources
 
 | Tool | What it does |
 |---|---|
 | `get_dev_resources` | External links attached to specific nodes |
-| `post_dev_resource` | Attach an external link to a node |
-| `get_design_context` | Full properties and geometry for specific nodes |
+| `post_dev_resource` | Attach an external link (e.g. a Storybook story or doc page) to a node — the link appears in Dev Mode's right panel for anyone inspecting that component |
+| `get_design_context` | Full properties and geometry for specific nodes (fills, strokes, radius, padding) — useful for verifying a component was built correctly without opening Figma |
 
 #### Projects & webhooks
 
 These tools require `FIGMA_TEAM_ID`.
+
+> **Note:** Webhooks require a publicly reachable server endpoint to receive Figma's event payloads. They are most useful once you have CI infrastructure in place (e.g. triggering a build on `LIBRARY_PUBLISH`). For most setups, `list_webhooks`, `create_webhook`, and `delete_webhook` won't be needed until that infrastructure exists.
 
 | Tool | What it does |
 |---|---|
