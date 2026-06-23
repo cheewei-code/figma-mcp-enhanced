@@ -77,14 +77,7 @@ export async function setVariable(
   return figmaFetch(`/v1/files/${fileKey}/variables`, {
     method: "POST",
     body: JSON.stringify({
-      variableMutations: [
-        {
-          type: "UPDATE_VARIABLE_VALUE",
-          variableId,
-          modeId,
-          value,
-        },
-      ],
+      variableModeValues: [{ variableId, modeId, value }],
     }),
   });
 }
@@ -104,7 +97,7 @@ export async function postDevResource(
   name: string,
   url: string
 ): Promise<any> {
-  return figmaFetch(`/v1/files/${fileKey}/dev_resources`, {
+  return figmaFetch(`/v1/dev_resources`, {
     method: "POST",
     body: JSON.stringify({
       dev_resources: [{ name, url, file_key: fileKey, node_id: nodeId }],
@@ -131,7 +124,7 @@ export async function getProjectStructure(teamId: string): Promise<any> {
 }
 
 export async function listWebhooks(teamId: string): Promise<any> {
-  return figmaFetch(`/v2/webhooks?team_id=${encodeURIComponent(teamId)}`);
+  return figmaFetch(`/v2/teams/${encodeURIComponent(teamId)}/webhooks`);
 }
 
 export async function createWebhook(
