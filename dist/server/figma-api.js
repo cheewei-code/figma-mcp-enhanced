@@ -32,7 +32,7 @@ export async function getComments(fileKey) {
 export async function postComment(fileKey, message, nodeId) {
     const body = { message };
     if (nodeId) {
-        body.client_meta = { node_id: nodeId };
+        body.client_meta = { node_id: nodeId, node_offset: { x: 0, y: 0 } };
     }
     return figmaFetch(`/v1/files/${fileKey}/comments`, {
         method: "POST",
@@ -55,14 +55,7 @@ export async function setVariable(fileKey, variableId, modeId, value) {
     return figmaFetch(`/v1/files/${fileKey}/variables`, {
         method: "POST",
         body: JSON.stringify({
-            variableMutations: [
-                {
-                    type: "UPDATE_VARIABLE_VALUE",
-                    variableId,
-                    modeId,
-                    value,
-                },
-            ],
+            variableModeValues: [{ variableId, modeId, value }],
         }),
     });
 }
@@ -74,7 +67,7 @@ export async function getDevResources(fileKey, nodeIds) {
     return figmaFetch(`/v1/files/${fileKey}/dev_resources?node_ids=${encodeURIComponent(ids)}`);
 }
 export async function postDevResource(fileKey, nodeId, name, url) {
-    return figmaFetch(`/v1/files/${fileKey}/dev_resources`, {
+    return figmaFetch(`/v1/dev_resources`, {
         method: "POST",
         body: JSON.stringify({
             dev_resources: [{ name, url, file_key: fileKey, node_id: nodeId }],
@@ -95,7 +88,7 @@ export async function getProjectStructure(teamId) {
     return { projects: withFiles };
 }
 export async function listWebhooks(teamId) {
-    return figmaFetch(`/v2/webhooks?team_id=${encodeURIComponent(teamId)}`);
+    return figmaFetch(`/v2/teams/${encodeURIComponent(teamId)}/webhooks`);
 }
 export async function createWebhook(teamId, eventType, endpoint, passcode, description) {
     return figmaFetch(`/v2/webhooks`, {
