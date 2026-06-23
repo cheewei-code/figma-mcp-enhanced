@@ -41,7 +41,7 @@ export async function postComment(
 ): Promise<any> {
   const body: Record<string, any> = { message };
   if (nodeId) {
-    body.client_meta = { node_id: nodeId };
+    body.client_meta = { node_id: nodeId, node_offset: { x: 0, y: 0 } };
   }
   return figmaFetch(`/v1/files/${fileKey}/comments`, {
     method: "POST",
