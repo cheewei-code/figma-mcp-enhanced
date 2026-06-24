@@ -267,3 +267,6 @@ If you copied `.mcp.json` into any project directories, delete those files too.
 
 **REST API tools return "FIGMA_TEAM_ID environment variable is not set"**
 - Add `FIGMA_TEAM_ID` to the `env` block in `.mcp.json`, or pass the `team_id` argument directly to the tool
+
+## Acknowledgments
+- [Chee Wei](https://github.com/cheewei-code) for adding figma's REST API
